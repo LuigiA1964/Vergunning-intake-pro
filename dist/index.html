@@ -1,0 +1,1585 @@
+<!DOCTYPE html>
+<!--
+================================================================================
+Vergunning Intake Pro - Document Completeness & BIBOB Pre-screening
+Versie: 1.0.0 | (c) 2026 L.P. Antenbrink, Knowledge by Data B.V.
+================================================================================
+-->
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="author" content="L.P. Antenbrink, Knowledge by Data">
+<meta name="application-name" content="Vergunning Intake Pro">
+<meta name="version" content="1.0.0">
+<title>Vergunning Intake Pro - Knowledge by Data</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+/* ── CSS Variables ── */
+:root {
+  --primary: #1e3a5f;
+  --accent: #e67e22;
+  --success: #27ae60;
+  --warning: #f39c12;
+  --danger: #c0392b;
+  --dark: #1a1a2e;
+  --light: #f8f9fa;
+  --gray: #6c757d;
+  --gray-light: #e9ecef;
+  --radius: 12px;
+  --shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+/* ── Reset & Base ── */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: var(--light);
+  min-height: 100vh;
+  color: #333;
+}
+
+/* ── Launcher Screen ── */
+.launcher-screen {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 10000;
+}
+.launcher-screen.hidden { display: none; }
+.launcher-box {
+  background: white; border-radius: 20px; padding: 40px;
+  max-width: 600px; width: 90%;
+  box-shadow: 0 25px 80px rgba(0,0,0,0.5);
+  text-align: center;
+}
+.launcher-box i.logo { font-size: 3rem; color: var(--primary); margin-bottom: 10px; }
+.launcher-box h1 { font-size: 1.8rem; color: var(--primary); margin: 10px 0 5px; }
+.launcher-box .subtitle { color: var(--gray); font-size: 1rem; margin-bottom: 25px; }
+.launcher-box .version { display: inline-block; background: var(--accent); color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; margin-bottom: 25px; }
+.launcher-box .btn-start {
+  width: 100%; padding: 16px; background: var(--primary); color: white;
+  border: none; border-radius: var(--radius); font-size: 1.1rem;
+  font-weight: 600; cursor: pointer; transition: background 0.3s;
+}
+.launcher-box .btn-start:hover { background: #2c5282; }
+.launcher-box .footer { margin-top: 25px; font-size: 0.75rem; color: var(--gray); }
+
+/* ── App Layout ── */
+.app-container { display: flex; min-height: 100vh; }
+.app-container.hidden { display: none; }
+
+/* ── Sidebar ── */
+.sidebar {
+  width: 260px; background: var(--dark); color: white;
+  padding: 20px; display: flex; flex-direction: column;
+  position: fixed; top: 0; left: 0; bottom: 0;
+  overflow-y: auto; z-index: 100;
+}
+.sidebar__header h1 { font-size: 1rem; color: var(--accent); }
+.sidebar__header p { color: var(--gray); font-size: 0.7rem; margin-top: 4px; }
+.sidebar__nav { margin-top: 25px; }
+.nav-item {
+  padding: 11px 14px; border-radius: 8px; cursor: pointer;
+  display: flex; align-items: center; gap: 10px; margin-bottom: 4px;
+  font-size: 0.9rem; color: rgba(255,255,255,0.7); transition: all 0.2s;
+}
+.nav-item:hover, .nav-item--active {
+  background: rgba(230,126,34,0.2); color: var(--accent);
+}
+.nav-item i { width: 20px; text-align: center; }
+.nav-item .badge {
+  margin-left: auto; background: var(--danger); color: white;
+  padding: 2px 7px; border-radius: 10px; font-size: 0.7rem; font-weight: 600;
+}
+.sidebar__footer {
+  margin-top: auto; padding-top: 15px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+}
+.sidebar__footer p { font-size: 0.65rem; color: var(--gray); line-height: 1.4; }
+
+/* ── Main Content ── */
+.main-content { flex: 1; padding: 30px; margin-left: 260px; overflow-y: auto; }
+
+/* ── Pages ── */
+.page { display: none; }
+.page--active { display: block; }
+
+/* ── Page Header ── */
+.page-header h2 { font-size: 1.5rem; color: var(--dark); margin-bottom: 5px; }
+.page-header p { color: var(--gray); margin-bottom: 20px; }
+
+/* ── Cards ── */
+.card {
+  background: white; border-radius: var(--radius); padding: 25px;
+  margin-bottom: 20px; box-shadow: var(--shadow);
+}
+.card h3 { color: var(--dark); margin-bottom: 15px; }
+.card h3 i { color: var(--accent); margin-right: 8px; }
+
+/* ── Buttons ── */
+.btn {
+  padding: 10px 20px; border: none; border-radius: 8px;
+  font-weight: 600; cursor: pointer; display: inline-flex;
+  align-items: center; gap: 8px; font-size: 0.9rem; transition: opacity 0.2s;
+}
+.btn:hover { opacity: 0.9; }
+.btn--primary { background: var(--accent); color: white; }
+.btn--success { background: var(--success); color: white; }
+.btn--danger { background: var(--danger); color: white; }
+.btn--outline { background: transparent; border: 2px solid var(--primary); color: var(--primary); }
+
+/* ── Vergunning Type Selection ── */
+.type-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px; margin-top: 15px;
+}
+.type-card {
+  padding: 15px; border: 2px solid var(--gray-light); border-radius: var(--radius);
+  cursor: pointer; transition: all 0.2s; text-align: left;
+}
+.type-card:hover { border-color: var(--accent); background: rgba(230,126,34,0.03); }
+.type-card--selected { border-color: var(--accent); background: rgba(230,126,34,0.08); }
+.type-card h4 { font-size: 0.9rem; color: var(--dark); margin-bottom: 4px; }
+.type-card p { font-size: 0.75rem; color: var(--gray); }
+.type-card .doc-count { font-size: 0.7rem; color: var(--accent); font-weight: 600; margin-top: 6px; }
+
+/* ── Upload Grid ── */
+.upload-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 15px; margin-top: 15px;
+}
+.upload-tile {
+  border: 3px dashed #ddd; border-radius: var(--radius); padding: 20px 12px;
+  text-align: center; cursor: pointer; transition: all 0.3s; position: relative;
+  min-height: 140px; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+}
+.upload-tile:hover { border-color: var(--accent); background: rgba(230,126,34,0.03); }
+.upload-tile--uploaded { border-color: var(--success); border-style: solid; background: rgba(39,174,96,0.05); }
+.upload-tile--required { }
+.upload-tile--optional { border-color: #ccc; border-width: 2px; }
+.upload-tile i.tile-icon { font-size: 2rem; margin-bottom: 8px; color: var(--accent); }
+.upload-tile--uploaded i.tile-icon { color: var(--success); }
+.upload-tile h4 { font-size: 0.8rem; color: var(--dark); word-wrap: break-word; hyphens: auto; margin-bottom: 4px; }
+.upload-tile p { font-size: 0.7rem; color: var(--gray); line-height: 1.3; }
+.upload-tile .tile-badge {
+  position: absolute; top: 6px; right: 6px; padding: 2px 6px;
+  border-radius: 8px; font-size: 0.6rem; font-weight: 700;
+}
+.upload-tile .tile-badge--required { background: rgba(192,57,43,0.1); color: var(--danger); }
+.upload-tile .tile-badge--optional { background: rgba(108,117,125,0.1); color: var(--gray); }
+.upload-tile .tile-badge--done { background: rgba(39,174,96,0.15); color: var(--success); }
+.upload-tile .tile-filename {
+  font-size: 0.65rem; color: var(--success); margin-top: 6px;
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.upload-tile input[type="file"] { display: none; }
+
+/* ── Completeness Bar ── */
+.completeness-bar { margin: 20px 0; }
+.completeness-bar__label { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.85rem; }
+.completeness-bar__track { height: 12px; background: var(--gray-light); border-radius: 6px; overflow: hidden; }
+.completeness-bar__fill { height: 100%; border-radius: 6px; transition: width 0.5s, background 0.5s; }
+
+/* ── Status List ── */
+.status-list { list-style: none; }
+.status-list li {
+  display: flex; align-items: center; gap: 10px; padding: 8px 12px;
+  border-bottom: 1px solid #f0f0f0; font-size: 0.85rem;
+}
+.status-list li:last-child { border-bottom: none; }
+.status-list li i { width: 18px; text-align: center; }
+
+/* ── Red Flags ── */
+.red-flag {
+  background: rgba(192,57,43,0.05); border-left: 4px solid var(--danger);
+  padding: 15px; margin-bottom: 12px; border-radius: 0 8px 8px 0;
+}
+.red-flag h4 { color: var(--danger); margin-bottom: 6px; font-size: 0.9rem; }
+.red-flag p { color: var(--gray); font-size: 0.85rem; line-height: 1.4; }
+.red-flag .severity {
+  display: inline-block; padding: 2px 8px; border-radius: 8px;
+  font-size: 0.7rem; font-weight: 700; margin-left: 8px;
+}
+.red-flag .severity--kritiek { background: rgba(192,57,43,0.15); color: var(--danger); }
+.red-flag .severity--hoog { background: rgba(230,126,34,0.15); color: var(--accent); }
+.red-flag .severity--midden { background: rgba(243,156,18,0.15); color: var(--warning); }
+.red-flag .severity--info { background: rgba(52,152,219,0.15); color: #3498db; }
+
+/* ── Advice Panel ── */
+.advice-panel {
+  padding: 25px; border-radius: var(--radius); margin: 20px 0;
+  border: 2px solid; text-align: center;
+}
+.advice-panel--green { border-color: var(--success); background: rgba(39,174,96,0.05); }
+.advice-panel--orange { border-color: var(--warning); background: rgba(243,156,18,0.05); }
+.advice-panel--red { border-color: var(--danger); background: rgba(192,57,43,0.05); }
+.advice-panel i { font-size: 2.5rem; margin-bottom: 10px; }
+.advice-panel h3 { margin-bottom: 8px; }
+.advice-panel p { color: var(--gray); font-size: 0.9rem; }
+
+/* ── Stats Grid ── */
+.stats-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px; margin-bottom: 20px;
+}
+.stat-card {
+  background: white; border-radius: var(--radius); padding: 15px;
+  box-shadow: var(--shadow); text-align: center;
+}
+.stat-card h4 { font-size: 0.75rem; color: var(--gray); margin-bottom: 4px; }
+.stat-card .value { font-size: 1.3rem; font-weight: 700; color: var(--dark); }
+
+/* ── Activity Log ── */
+.log-entry { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid #eee; }
+.log-entry:last-child { border-bottom: none; }
+.log-time { min-width: 70px; font-size: 0.75rem; color: var(--gray); font-family: monospace; }
+.log-icon {
+  width: 28px; height: 28px; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center; font-size: 0.8rem;
+}
+.log-icon--action { background: rgba(52,152,219,0.1); color: #3498db; }
+.log-icon--success { background: rgba(39,174,96,0.1); color: var(--success); }
+.log-icon--alert { background: rgba(192,57,43,0.1); color: var(--danger); }
+.log-icon--info { background: rgba(230,126,34,0.1); color: var(--accent); }
+.log-content { flex: 1; }
+.log-content strong { display: block; font-size: 0.85rem; color: var(--dark); }
+.log-content p { color: var(--gray); font-size: 0.8rem; margin: 0; }
+
+/* ── Print ── */
+@media print {
+  .sidebar, .nav-item, .btn { display: none !important; }
+  .main-content { margin-left: 0 !important; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- LAUNCHER SCREEN                                                       -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div id="launcherScreen" class="launcher-screen">
+  <div class="launcher-box">
+    <i class="fas fa-file-circle-check logo"></i>
+    <h1>Vergunning Intake Pro</h1>
+    <p class="subtitle">Document Completeness & BIBOB Pre-screening</p>
+    <div class="version">v1.0.0</div>
+    <br>
+    <button class="btn-start" onclick="VIP.start()">
+      <i class="fas fa-rocket"></i> Start Applicatie
+    </button>
+    <div class="footer">
+      <p>&copy; 2026 Knowledge by Data B.V. | Alle rechten voorbehouden</p>
+      <p style="margin-top:4px">L.P. Antenbrink | info@knowledgebydata.nl</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- APP CONTAINER                                                          -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div id="appContainer" class="app-container hidden">
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar__header">
+      <h1><i class="fas fa-file-circle-check"></i> Vergunning Intake Pro</h1>
+      <p>Knowledge by Data B.V.</p>
+    </div>
+    <div class="sidebar__nav" id="sidebarNav">
+      <div class="nav-item nav-item--active" data-page="select" onclick="VIP.navigate('select')">
+        <i class="fas fa-list-check"></i> Vergunningtype
+      </div>
+      <div class="nav-item" data-page="upload" onclick="VIP.navigate('upload')">
+        <i class="fas fa-upload"></i> Documenten
+      </div>
+      <div class="nav-item" data-page="status" onclick="VIP.navigate('status')">
+        <i class="fas fa-clipboard-check"></i> Compleetheid
+      </div>
+      <div class="nav-item" data-page="scan" onclick="VIP.navigate('scan')">
+        <i class="fas fa-search"></i> BIBOB Scan <span class="badge" id="flagBadge" style="display:none">0</span>
+      </div>
+      <div class="nav-item" data-page="advice" onclick="VIP.navigate('advice')">
+        <i class="fas fa-gavel"></i> Advies
+      </div>
+      <div class="nav-item" data-page="letter" onclick="VIP.navigate('letter')">
+        <i class="fas fa-envelope"></i> Brief Genereren
+      </div>
+      <div class="nav-item" data-page="log" onclick="VIP.navigate('log')">
+        <i class="fas fa-history"></i> Activiteitenlog
+      </div>
+    </div>
+    <div class="sidebar__footer">
+      <p>&copy; 2026 Knowledge by Data B.V.</p>
+      <p>Versie 1.0.0</p>
+    </div>
+  </nav>
+
+  <!-- Main Content Area -->
+  <main class="main-content">
+
+    <!-- ═══ PAGE: Vergunningtype Selectie ═══ -->
+    <div id="page-select" class="page page--active">
+      <div class="page-header">
+        <h2>Vergunningtype Selecteren</h2>
+        <p>Kies het type vergunning waarvoor documenten worden ingediend</p>
+      </div>
+      <div class="card">
+        <h3><i class="fas fa-search"></i> Zoeken</h3>
+        <input type="text" id="typeSearch" placeholder="Zoek op vergunningtype..."
+               oninput="VIP.filterTypes(this.value)"
+               style="width:100%;padding:12px;border:2px solid #e0e0e0;border-radius:8px;font-size:1rem">
+      </div>
+      <div class="card">
+        <h3><i class="fas fa-list"></i> Beschikbare Vergunningtypen</h3>
+        <div class="type-grid" id="typeGrid"></div>
+      </div>
+    </div>
+
+    <!-- ═══ PAGE: Documenten Upload ═══ -->
+    <div id="page-upload" class="page">
+      <div class="page-header">
+        <h2>Documenten Uploaden</h2>
+        <p id="uploadSubtitle">Selecteer eerst een vergunningtype</p>
+      </div>
+      <div id="noTypeSelected" class="card" style="text-align:center;padding:60px">
+        <i class="fas fa-arrow-left" style="font-size:3rem;color:var(--gray);margin-bottom:15px"></i>
+        <p style="color:var(--gray);font-size:1.1rem">Selecteer eerst een vergunningtype om documenten te uploaden</p>
+      </div>
+      <div id="uploadArea" style="display:none">
+        <div class="completeness-bar">
+          <div class="completeness-bar__label">
+            <span>Compleetheid verplichte documenten</span>
+            <span id="completenessPercent">0%</span>
+          </div>
+          <div class="completeness-bar__track">
+            <div class="completeness-bar__fill" id="completenessBar" style="width:0%;background:var(--danger)"></div>
+          </div>
+        </div>
+        <div class="card">
+          <h3><i class="fas fa-file-arrow-up"></i> Verplichte Documenten</h3>
+          <div class="upload-grid" id="requiredGrid"></div>
+        </div>
+        <div class="card">
+          <h3><i class="fas fa-file-circle-plus"></i> Aanvullende Documenten (optioneel)</h3>
+          <div class="upload-grid" id="optionalGrid"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ PAGE: Compleetheid Status ═══ -->
+    <div id="page-status" class="page">
+      <div class="page-header">
+        <h2>Compleetheid Check</h2>
+        <p>Overzicht van alle verplichte en aanvullende documenten</p>
+      </div>
+      <div class="stats-grid" id="statusStats"></div>
+      <div class="card">
+        <h3><i class="fas fa-check-double"></i> Document Status</h3>
+        <ul class="status-list" id="statusList"></ul>
+      </div>
+    </div>
+
+    <!-- ═══ PAGE: BIBOB Scan ═══ -->
+    <div id="page-scan" class="page">
+      <div class="page-header">
+        <h2>BIBOB Pre-screening</h2>
+        <p>Automatische scan op BIBOB-indicatoren in geüploade documenten</p>
+      </div>
+      <div class="stats-grid" id="scanStats"></div>
+      <div id="scanResults"></div>
+      <div id="noScanResults" class="card" style="text-align:center;padding:40px">
+        <i class="fas fa-shield-halved" style="font-size:3rem;color:var(--gray);margin-bottom:15px"></i>
+        <p style="color:var(--gray)">Upload documenten om de BIBOB pre-screening te starten</p>
+      </div>
+    </div>
+
+    <!-- ═══ PAGE: Advies ═══ -->
+    <div id="page-advice" class="page">
+      <div class="page-header">
+        <h2>Integriteitsadvies</h2>
+        <p>Automatisch advies op basis van documentanalyse en BIBOB-indicatoren</p>
+      </div>
+      <div id="adviceContent"></div>
+    </div>
+
+    <!-- ═══ PAGE: Brief Genereren ═══ -->
+    <div id="page-letter" class="page">
+      <div class="page-header">
+        <h2>Brief Genereren</h2>
+        <p>Genereer een brief voor de aanvrager met ontbrekende documenten</p>
+      </div>
+      <div class="card">
+        <h3><i class="fas fa-building-columns"></i> Gemeentegegevens</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:15px">
+          <input type="text" id="letterGemeente" placeholder="Gemeente naam" style="padding:10px;border:2px solid #e0e0e0;border-radius:8px;font-size:0.9rem">
+          <input type="text" id="letterAfdeling" placeholder="Afdeling" style="padding:10px;border:2px solid #e0e0e0;border-radius:8px;font-size:0.9rem">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <input type="text" id="letterBehandelaar" placeholder="Naam behandelaar" style="padding:10px;border:2px solid #e0e0e0;border-radius:8px;font-size:0.9rem">
+          <input type="text" id="letterZaaknummer" placeholder="Zaaknummer" style="padding:10px;border:2px solid #e0e0e0;border-radius:8px;font-size:0.9rem">
+        </div>
+      </div>
+      <div class="card">
+        <h3><i class="fas fa-user"></i> Aanvragergegevens</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:15px">
+          <input type="text" id="letterNaam" placeholder="Naam aanvrager" style="padding:10px;border:2px solid #e0e0e0;border-radius:8px;font-size:0.9rem">
+          <input type="text" id="letterAdres" placeholder="Adres" style="padding:10px;border:2px solid #e0e0e0;border-radius:8px;font-size:0.9rem">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <input type="text" id="letterPostcode" placeholder="Postcode + Plaats" style="padding:10px;border:2px solid #e0e0e0;border-radius:8px;font-size:0.9rem">
+          <input type="text" id="letterDatum" placeholder="Datum (dd-mm-jjjj)" style="padding:10px;border:2px solid #e0e0e0;border-radius:8px;font-size:0.9rem">
+        </div>
+      </div>
+      <div id="letterPreview" class="card" style="display:none">
+        <h3><i class="fas fa-eye"></i> Voorbeeld</h3>
+        <div id="letterContent" style="font-family:'Times New Roman',serif;line-height:1.6;padding:20px;border:1px solid #ddd;border-radius:8px;background:white"></div>
+      </div>
+      <div style="display:flex;gap:12px;margin-top:15px">
+        <button class="btn btn--primary" onclick="LetterGen.preview()"><i class="fas fa-eye"></i> Voorbeeld</button>
+        <button class="btn btn--success" onclick="LetterGen.downloadHTML()"><i class="fas fa-download"></i> Download Brief (HTML)</button>
+      </div>
+    </div>
+
+    <!-- ═══ PAGE: Activiteitenlog ═══ -->
+    <div id="page-log" class="page">
+      <div class="page-header">
+        <h2>Activiteitenlog</h2>
+        <p>Alle acties en bevindingen in chronologische volgorde</p>
+      </div>
+      <div class="card">
+        <div id="logEntries">
+          <p style="color:var(--gray);text-align:center">Nog geen activiteiten</p>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- JavaScript wordt in delen toegevoegd -->
+<script>
+'use strict';
+
+// ============================================================================
+// VERGUNNINGEN DATABASE — Alle 30 typen met verplichte/optionele documenten
+// ============================================================================
+const VERGUNNING_TYPES = [
+  {
+    id: 'omg-bouwen',
+    name: 'Omgevingsvergunning (bouwen/verbouwen)',
+    category: 'Omgevingsvergunning',
+    basis: 'Omgevingswet',
+    termijn: '8 weken (regulier), 26 weken (uitgebreid)',
+    bibobRelevant: false,
+    required: [
+      'Aanvraagformulier via het Omgevingsloket',
+      'Situatietekening (schaal 1:1000) met kadastrale grenzen en noordpijl',
+      'Bouwtekeningen bestaande situatie (plattegronden, doorsneden, gevels 1:100)',
+      'Bouwtekeningen nieuwe situatie (plattegronden, doorsneden, gevels 1:100)',
+      'Constructieberekeningen (sterkte- en stabiliteitsberekeningen)',
+      'Foto\'s van de bestaande situatie en directe omgeving',
+      'Opgave van te gebruiken materialen en kleuren'
+    ],
+    optional: [
+      'EPC-berekening / energieprestatieberekening',
+      'BENG-berekening (Bijna Energieneutrale Gebouwen)',
+      'Daglichttoetreding- en ventilatieberekeningen',
+      'Bodemonderzoeksrapport',
+      'Geluidsonderzoek',
+      'Archeologisch onderzoek',
+      'Ecologisch onderzoek / quickscan flora en fauna',
+      'Welstandstoets / beeldkwaliteitsplan',
+      'Stikstofberekening (AERIUS)',
+      'Bestemmingsplancheck / toets omgevingsplan',
+      'Watertoets'
+    ]
+  },
+  {
+    id: 'omg-slopen',
+    name: 'Omgevingsvergunning (slopen/sloopmelding)',
+    category: 'Omgevingsvergunning',
+    basis: 'Omgevingswet, Bouwbesluit',
+    termijn: 'Melding min. 4 weken voor start',
+    bibobRelevant: false,
+    required: [
+      'Meldingsformulier via het Omgevingsloket',
+      'Naam en adresgegevens eigenaar te slopen bouwwerk',
+      'Naam en adresgegevens uitvoerder sloopwerkzaamheden',
+      'Adres en kadastraal nummer te slopen bouwwerk',
+      'Beschrijving van de aard van het bouwwerk',
+      'Geplande start- en einddatum van de sloop',
+      'Beschrijving van de sloopwijze',
+      'Overzicht vrijkomende materialen en afvoer',
+      'Situatietekening met aanduiding te slopen bouwwerk'
+    ],
+    optional: [
+      'Asbestinventarisatierapport (verplicht voor gebouwen van voor 1994)',
+      'Sloopveiligheidsplan',
+      'Foto\'s van de bestaande situatie',
+      'Bewijs van melding aan nutsbedrijven'
+    ]
+  },
+  {
+    id: 'omg-monument',
+    name: 'Omgevingsvergunning (monumenten)',
+    category: 'Omgevingsvergunning',
+    basis: 'Omgevingswet, Erfgoedwet',
+    termijn: '8 weken (gemeentelijk), 6 maanden (rijksmonument)',
+    bibobRelevant: false,
+    required: [
+      'Aanvraagformulier via het Omgevingsloket',
+      'Bouwtekeningen bestaande en nieuwe situatie',
+      'Foto\'s van het monument en directe omgeving',
+      'Gedetailleerde beschrijving voorgenomen werkzaamheden',
+      'Opgave van materialen, kleuren en technieken'
+    ],
+    optional: [
+      'Cultuurhistorisch of bouwhistorisch onderzoeksrapport',
+      'Restauratieplan met fasering',
+      'Constructieve onderbouwing',
+      'Advies Rijksdienst Cultureel Erfgoed (bij rijksmonumenten)'
+    ]
+  },
+  {
+    id: 'omg-aanleg',
+    name: 'Omgevingsvergunning (aanlegactiviteit)',
+    category: 'Omgevingsvergunning',
+    basis: 'Omgevingswet',
+    termijn: '8 weken',
+    bibobRelevant: false,
+    required: [
+      'Aanvraagformulier via het Omgevingsloket',
+      'Situatietekening met locatie en omvang werkzaamheden',
+      'Beschrijving aard werkzaamheden',
+      'Tekening met maatvoering van het ontwerp'
+    ],
+    optional: [
+      'Archeologisch onderzoeksrapport (conform KNA-normen)',
+      'Bodemonderzoeksrapport',
+      'Ecologische quickscan'
+    ]
+  },
+  {
+    id: 'omg-milieu',
+    name: 'Omgevingsvergunning (milieu)',
+    category: 'Omgevingsvergunning',
+    basis: 'Omgevingswet',
+    termijn: '8 weken (regulier), 26 weken (uitgebreid)',
+    bibobRelevant: true,
+    required: [
+      'Aanvraagformulier via het Omgevingsloket',
+      'Beschrijving van de bedrijfsactiviteiten',
+      'Situatietekening met ligging bedrijf en omgeving',
+      'Plattegronden met indeling bedrijfsruimten',
+      'Processchema\'s van productieprocessen'
+    ],
+    optional: [
+      'Akoestisch onderzoek (geluidsrapport)',
+      'Geuronderzoek',
+      'Luchtkwaliteitsonderzoek',
+      'Bodemonderzoek',
+      'Afvalstoffenregistratie en -plan',
+      'Energiebesparingsplan',
+      'Externe veiligheidsrapportage (QRA)',
+      'MER (Milieu Effect Rapportage)',
+      'Stikstofberekening (AERIUS)'
+    ]
+  },
+  {
+    id: 'omg-brand',
+    name: 'Omgevingsvergunning (brandveilig gebruik)',
+    category: 'Omgevingsvergunning',
+    basis: 'Omgevingswet, Besluit bouwwerken leefomgeving',
+    termijn: '6 maanden (vergunning), 4 weken (melding)',
+    bibobRelevant: false,
+    required: [
+      'Aanvraagformulier via het Omgevingsloket',
+      'Situatietekening (schaal min. 1:1000)',
+      'Plattegronden per verdieping (schaal min. 1:100)',
+      'Indeling en bestemming van ruimten',
+      'Maximaal aantal personen per ruimte',
+      'Vluchtroutes en nooduitgangen',
+      'Locatie brandmeldinstallatie, sprinklers, blusmiddelen',
+      'Brandcompartimentering'
+    ],
+    optional: [
+      'Certificaten brandmeldinstallatie en ontruimingsalarm',
+      'Inspectierapporten brandveiligheidsinstallaties',
+      'Ontruimingsplan'
+    ]
+  },
+  {
+    id: 'omg-inrit',
+    name: 'Omgevingsvergunning (inrit/uitrit)',
+    category: 'Omgevingsvergunning',
+    basis: 'Omgevingswet, APV',
+    termijn: '8 weken',
+    bibobRelevant: false,
+    required: [
+      'Aanvraagformulier via het Omgevingsloket',
+      'Situatietekening (schaal 1:500 of 1:1000)',
+      'Locatie van de in-/uitrit aan het perceel',
+      'Maatvoering t.o.v. erfgrenzen',
+      'Materialen en kleuren',
+      'Wijze van ontsluiting',
+      'Duidelijke schaalaanduiding'
+    ],
+    optional: [
+      'Tekening bestaande situatie',
+      'Foto\'s van de huidige inrit en omgeving'
+    ]
+  },
+  {
+    id: 'omg-reclame',
+    name: 'Omgevingsvergunning (reclame/uithangbord)',
+    category: 'Omgevingsvergunning',
+    basis: 'Omgevingswet, APV, welstandsnota',
+    termijn: '8 weken',
+    bibobRelevant: false,
+    required: [
+      'Aanvraagformulier',
+      'Tekening reclame-uiting met exacte afmetingen',
+      'Foto of render van het gewenste ontwerp',
+      'Situatietekening met locatie aan het pand',
+      'Kleur- en materiaalopgave',
+      'Foto van de huidige situatie (gevel)'
+    ],
+    optional: [
+      'Lichtplan (bij verlichte reclame)',
+      'Constructieberekening (bij zware constructies)'
+    ]
+  },
+  {
+    id: 'omg-kappen',
+    name: 'Omgevingsvergunning (kappen/vellen)',
+    category: 'Omgevingsvergunning',
+    basis: 'Omgevingswet, APV (Bomenverordening)',
+    termijn: '8 weken (verlengbaar tot 26 weken)',
+    bibobRelevant: false,
+    required: [
+      'Aanvraagformulier (Omgevingsloket of gemeente)',
+      'Situatieschets/plattegrond met locatie boom/bomen',
+      'Foto\'s van te kappen boom/bomen',
+      'Boomsoort, diameter en geschatte hoogte',
+      'Onderbouwing: reden van de kapaanvraag'
+    ],
+    optional: [
+      'Boomveiligheidsrapport',
+      'Ecologische quickscan',
+      'Herplantplan'
+    ]
+  },
+  {
+    id: 'exploitatie',
+    name: 'Exploitatievergunning (horeca)',
+    category: 'Horeca',
+    basis: 'APV',
+    termijn: '8 weken',
+    bibobRelevant: true,
+    required: [
+      'Aanvraagformulier exploitatievergunning',
+      'Kopie geldig identiteitsbewijs ondernemer/eigenaar',
+      'Kopie geldig identiteitsbewijs alle leidinggevenden',
+      'VOG van alle leidinggevenden (max 3 maanden oud)',
+      'Plattegrond horecapand (schaal 1:100)',
+      'Huur-, koop- of pachtovereenkomst',
+      'Uittreksel Kamer van Koophandel (KVK)',
+      'Arbeidscontracten leidinggevenden'
+    ],
+    optional: [
+      'Oprichtingsakte of stichtingsakte',
+      'BIBOB-vragenformulier met bewijsstukken financiering',
+      'Leidinggevendenverklaring',
+      'Uittreksel BRP (personen < 5 jaar in NL)',
+      'Bewijs eigendom inventaris en inrichting'
+    ]
+  },
+  {
+    id: 'alcoholwet',
+    name: 'Alcoholwetvergunning',
+    category: 'Horeca',
+    basis: 'Alcoholwet',
+    termijn: '8 weken',
+    bibobRelevant: true,
+    required: [
+      'Aanvraagformulier Alcoholwetvergunning',
+      'Uittreksel Kamer van Koophandel (KVK)',
+      'Kopie geldig identiteitsbewijs alle leidinggevenden',
+      'Verklaring Sociale Hygiëne alle leidinggevenden',
+      'Plattegrond pand (schaal 1:100) met horecalokaliteiten',
+      'Huur-, koop- of pachtcontract'
+    ],
+    optional: [
+      'BIBOB-vragenformulier met financiële bewijsstukken',
+      'VOG van leidinggevenden',
+      'Oprichtingsakte (bij rechtspersonen)',
+      'Uittreksel BRP (personen < 5 jaar in NL)'
+    ]
+  },
+  {
+    id: 'terras',
+    name: 'Terrasvergunning',
+    category: 'Horeca',
+    basis: 'APV',
+    termijn: '8 weken',
+    bibobRelevant: false,
+    required: [
+      'Aanvraagformulier terrasvergunning',
+      'Terrastekening op schaal 1:100 met locatie, afmetingen, tafels/stoelen',
+      'Situatietekening met omgeving (schaal 1:500 of 1:1000)',
+      'Beschrijving terraselementen (parasols, windschermen, etc.)'
+    ],
+    optional: [
+      'Kleurenfoto\'s of productfolders terrasmeubilair',
+      'Materiaal- en kleuropgave',
+      'Verklaring doorgang voetgangers/hulpdiensten',
+      'Bewijs geldige exploitatie-/alcoholwetvergunning'
+    ]
+  },
+  {
+    id: 'evenement',
+    name: 'Evenementenvergunning',
+    category: 'Evenementen',
+    basis: 'APV',
+    termijn: '8 weken (aanvraag 8-12 weken van tevoren)',
+    bibobRelevant: false,
+    required: [
+      'Aanvraagformulier evenementenvergunning',
+      'Plattegrond evenemententerrein met objecten, sanitair, nooduitgangen',
+      'Veiligheids- en calamiteitenplan',
+      'Risico-inventarisatie',
+      'Organisatieschema met verantwoordelijkheden',
+      'Communicatieplan',
+      'Ontruimingsplan',
+      'BHV-plan'
+    ],
+    optional: [
+      'Verkeersplan met omleidingsroutes',
+      'Geluidsplan met verwachte niveaus',
+      'Constructierapporten (tenten, podia, tribunes)',
+      'Verzekeringsbewijs (aansprakelijkheid)',
+      'Draaiboek evenement',
+      'Melding hulpdiensten',
+      'Ontheffing Alcoholwet',
+      'HACCP-plan / voedselveiligheidsplan',
+      'Melding Vuurwerk'
+    ]
+  },
+  {
+    id: 'standplaats',
+    name: 'Standplaatsvergunning',
+    category: 'Handel',
+    basis: 'APV',
+    termijn: '8 weken',
+    bibobRelevant: false,
+    required: [
+      'Aanvraagformulier standplaatsvergunning',
+      'Uittreksel Kamer van Koophandel (KVK)',
+      'Kopie geldig identiteitsbewijs',
+      'Situatietekening met gewenste locatie',
+      'Tekening/foto verkoopwagen/kraam met afmetingen',
+      'Beschrijving te verkopen assortiment',
+      'Opgave benodigde ruimte'
+    ],
+    optional: [
+      'VOG (max 3 maanden oud)',
+      'Bewijs voedselveiligheid',
+      'Aansprakelijkheidsverzekering'
+    ]
+  },
+  {
+    id: 'markt',
+    name: 'Marktvergunning',
+    category: 'Handel',
+    basis: 'Marktverordening, APV',
+    termijn: 'Varieert per gemeente',
+    bibobRelevant: false,
+    required: [
+      'Aanvraagformulier marktvergunning',
+      'Uittreksel Kamer van Koophandel (KVK)',
+      'Kopie geldig identiteitsbewijs',
+      'VOG (max 3 maanden oud)',
+      'Beschrijving te verkopen assortiment'
+    ],
+    optional: [
+      'Pasfoto',
+      'Foto kraam/verkoopwagen',
+      'Bewijs WA-verzekering',
+      'Bewijs inschrijving CRK'
+    ]
+  },
+  {
+    id: 'vent',
+    name: 'Ventvergunning',
+    category: 'Handel',
+    basis: 'APV',
+    termijn: '8 weken',
+    bibobRelevant: false,
+    required: [
+      'Aanvraagformulier ventvergunning',
+      'Uittreksel Kamer van Koophandel (KVK)',
+      'Kopie geldig identiteitsbewijs',
+      'Beschrijving van de waren',
+      'Gebied waarin gevent wordt'
+    ],
+    optional: [
+      'VOG (max 3 maanden oud)',
+      'Foto voertuig/karretje'
+    ]
+  },
+  {
+    id: 'kansspel',
+    name: 'Kansspelautomatenvergunning',
+    category: 'Kansspelen',
+    basis: 'Wet op de kansspelen',
+    termijn: '8 weken',
+    bibobRelevant: true,
+    required: [
+      'Aanvraagformulier aanwezigheidsvergunning kansspelautomaten',
+      'Bewijs geldige Alcoholwet-/exploitatievergunning',
+      'Kopie geldig identiteitsbewijs ondernemer',
+      'Bewijs modelgoedkeuring automaat (keurmerk Kansspelautoriteit)',
+      'Type en serienummer automaat',
+      'Plattegrond met beoogde opstelplaats'
+    ],
+    optional: [
+      'Huurovereenkomst of eigendomsbewijs automaat',
+      'Bewijs scheiding minderjarigen'
+    ]
+  },
+  {
+    id: 'loterij',
+    name: 'Loterijvergunning / kleine kansspelen',
+    category: 'Kansspelen',
+    basis: 'Wet op de kansspelen',
+    termijn: '8 weken',
+    bibobRelevant: false,
+    required: [
+      'Aanvraagformulier loterijvergunning',
+      'Statuten van de organisatie',
+      'Beschrijving doel opbrengst',
+      'Overzicht prijzen en waarde',
+      'Plan van aanpak (lotverkoop, trekking)'
+    ],
+    optional: [
+      'Bewijs vereniging bestaat min. 3 jaar',
+      'Schriftelijke toestemming goede doel'
+    ]
+  },
+  {
+    id: 'parkeer-bewoner',
+    name: 'Parkeervergunning (bewoners)',
+    category: 'Parkeren',
+    basis: 'Parkeerverordening',
+    termijn: 'Varieert, vaak direct',
+    bibobRelevant: false,
+    required: [
+      'Aanvraagformulier of digitale aanvraag (DigiD)',
+      'Bewijs inschrijving op het adres (BRP)',
+      'Kentekenbewijs (deel 1 of tenaamstellingscode)',
+      'Kopie geldig identiteitsbewijs of rijbewijs'
+    ],
+    optional: [
+      'Leasecontract of huurovereenkomst (max 1 jaar oud)',
+      'Leaseverklaring (max 1 maand oud)',
+      'Werkgeversverklaring (max 1 maand oud)',
+      'Eigendomsbewijs (bij buitenlands kenteken)'
+    ]
+  },
+  {
+    id: 'parkeer-bedrijf',
+    name: 'Parkeervergunning (bedrijven)',
+    category: 'Parkeren',
+    basis: 'Parkeerverordening',
+    termijn: 'Varieert per gemeente',
+    bibobRelevant: false,
+    required: [
+      'Aanvraagformulier bedrijfsparkeervergunning',
+      'Uittreksel Kamer van Koophandel (KVK)',
+      'Bewijs vestiging op het adres',
+      'Kentekenbewijs bedrijfsvoertuig',
+      'Huurovereenkomst of eigendomsbewijs bedrijfspand'
+    ],
+    optional: []
+  },
+  {
+    id: 'ligplaats',
+    name: 'Ligplaatsvergunning (woonboot)',
+    category: 'Wonen',
+    basis: 'APV, Ligplaatsenverordening',
+    termijn: '13 weken (verlengbaar 8 weken)',
+    bibobRelevant: false,
+    required: [
+      'Aanvraagformulier ligplaatsvergunning',
+      'Kopie geldig identiteitsbewijs',
+      'Bewijs van eigendom vaartuig (koopakte)',
+      'Foto\'s vaartuig (links, rechts, voor, achter)',
+      'Afmetingen vaartuig (lengte, breedte, hoogte)',
+      'Gewenste locatie ligplaats'
+    ],
+    optional: [
+      'Verklaring van afstand huidige vergunninghouder',
+      'Technische keuring of certificaat deugdelijkheid',
+      'Verzekeringsbewijs (WA-verzekering)'
+    ]
+  },
+  {
+    id: 'collecte',
+    name: 'Collectevergunning',
+    category: 'Overig',
+    basis: 'APV',
+    termijn: '8 weken',
+    bibobRelevant: false,
+    required: [
+      'Aanvraagformulier collectevergunning',
+      'Beschrijving doel van de collecte',
+      'Geplande datum/periode en locatie',
+      'Wijze van collecteren',
+      'Beschrijving besteding opbrengst'
+    ],
+    optional: [
+      'Schriftelijke toestemming goede doel',
+      'Bewijs inschrijving CBF'
+    ]
+  },
+  {
+    id: 'geluidhinder',
+    name: 'Ontheffing geluidhinder',
+    category: 'Overig',
+    basis: 'APV',
+    termijn: '8 weken',
+    bibobRelevant: false,
+    required: [
+      'Aanvraagformulier ontheffing geluidhinder',
+      'Beschrijving geluidveroorzakende activiteit',
+      'Geplande datum, tijdstippen en duur',
+      'Locatie van de activiteit',
+      'Verwacht geluidsniveau en maatregelen',
+      'Beschrijving geluidsapparatuur'
+    ],
+    optional: [
+      'Akoestisch onderzoek (bij grootschalig)',
+      'Toestemming omwonenden'
+    ]
+  },
+  {
+    id: 'splitsing',
+    name: 'Splitsingsvergunning (woning)',
+    category: 'Wonen',
+    basis: 'Huisvestingswet, Huisvestingsverordening',
+    termijn: '8 weken',
+    bibobRelevant: false,
+    required: [
+      'Aanvraagformulier splitsingsvergunning',
+      'Plattegronden per verdieping met indeling per woning',
+      'Lengte- en dwarsdoorsneden',
+      'Alle gevelaanzichten',
+      'Kadastrale kaart met positie pand',
+      'Splitsingstekening (conform modelreglement)'
+    ],
+    optional: [
+      'Rapportage geluidsisolatie',
+      'Rapportage brandveiligheid (compartimentering)',
+      'Energielabel per woning',
+      'Bouwkundig rapport'
+    ]
+  },
+  {
+    id: 'woningonttrekking',
+    name: 'Woningonttrekkingsvergunning',
+    category: 'Wonen',
+    basis: 'Huisvestingswet, Huisvestingsverordening',
+    termijn: '8 weken',
+    bibobRelevant: false,
+    required: [
+      'Aanvraagformulier woningonttrekking',
+      'Beschrijving huidig en beoogd gebruik',
+      'Plattegronden huidige en nieuwe situatie',
+      'Kopie geldig identiteitsbewijs',
+      'Eigendomsbewijs of toestemming eigenaar'
+    ],
+    optional: [
+      'Onderbouwing noodzaak tot onttrekking',
+      'Compensatieplan'
+    ]
+  },
+  {
+    id: 'kamerverhuur',
+    name: 'Kamerverhuurvergunning',
+    category: 'Wonen',
+    basis: 'Huisvestingswet, Huisvestingsverordening',
+    termijn: '8 weken',
+    bibobRelevant: false,
+    required: [
+      'Aanvraagformulier kamerverhuurvergunning',
+      'Plattegronden met indeling kamers en afmetingen',
+      'Kopie geldig identiteitsbewijs eigenaar/verhuurder',
+      'Eigendomsbewijs of toestemming eigenaar',
+      'Bewijs inschrijving KVK (indien bedrijfsmatig)'
+    ],
+    optional: [
+      'Brandveiligheidsbeoordeling',
+      'Bewijs voldoende geluidsisolatie',
+      'Toetsing bestemmingsplan',
+      'Beheerplan'
+    ]
+  },
+  {
+    id: 'bnb',
+    name: 'Bed & Breakfast vergunning',
+    category: 'Wonen',
+    basis: 'Omgevingswet, Huisvestingsverordening',
+    termijn: '8 weken',
+    bibobRelevant: false,
+    required: [
+      'Aanvraagformulier via het Omgevingsloket',
+      'Bouwtekeningen / plattegronden van het pand',
+      'Situatietekening',
+      'Beschrijving plan (aantal kamers, gasten)',
+      'Bewijs dat eigenaar zelf in pand woont'
+    ],
+    optional: [
+      'Brandveiligheidsbeoordeling',
+      'Registratienummer toeristische verhuur',
+      'Bewijs inschrijving KVK',
+      'Foto\'s B&B-ruimten',
+      'Verklaring hoofdgebruik als woning'
+    ]
+  },
+  {
+    id: 'water',
+    name: 'Watervergunning',
+    category: 'Overig',
+    basis: 'Omgevingswet',
+    termijn: '8 weken',
+    bibobRelevant: false,
+    required: [
+      'Aanvraagformulier via het Omgevingsloket',
+      'Beschrijving activiteit (lozen, onttrekken, dempen, etc.)',
+      'Situatietekening t.o.v. watersysteem',
+      'Technische specificaties van de activiteit'
+    ],
+    optional: [
+      'Lozingsplan met samenstelling/hoeveelheid water',
+      'Grondwateronderzoek',
+      'Hydrologisch onderzoek',
+      'Constructietekeningen (bouwen nabij waterkeringen)',
+      'Ecologisch rapport'
+    ]
+  },
+  {
+    id: 'zwaarverkeer',
+    name: 'Ontheffing zwaar verkeer',
+    category: 'Verkeer',
+    basis: 'Wegenverkeerswet',
+    termijn: '5 werkdagen',
+    bibobRelevant: false,
+    required: [
+      'Aanvraagformulier ontheffing zwaar verkeer',
+      'Kentekenbewijs voertuig',
+      'Gewichtsverklaring (ondertekend)',
+      'Aslastberekening',
+      'Asconfiguratie (asverdeling)'
+    ],
+    optional: [
+      'RDW-keuringscertificaat (zware kraan >=35 tonmeter)',
+      'Plattegrond met afmetingen (exceptioneel transport)',
+      'Routeplan',
+      'Bewijs ondeelbare lading'
+    ]
+  },
+  {
+    id: 'huisvesting',
+    name: 'Huisvestingsvergunning',
+    category: 'Wonen',
+    basis: 'Huisvestingswet, Huisvestingsverordening',
+    termijn: 'Varieert per gemeente',
+    bibobRelevant: false,
+    required: [
+      'Aanvraagformulier huisvestingsvergunning',
+      'Kopie geldig identiteitsbewijs',
+      'Bewijs inschrijving als woningzoekende',
+      'Inkomensverklaring (Belastingdienst)',
+      'Huishoudverklaring (samenstelling huishouden)'
+    ],
+    optional: [
+      'Bewijs urgentie',
+      'Bewijs economische/maatschappelijke binding gemeente',
+      'Bewijs verblijfsvergunning (niet-EU-burgers)'
+    ]
+  }
+];
+
+// ============================================================================
+// ACTIVITY LOG
+// ============================================================================
+const ActivityLog = {
+  entries: [],
+  add(type, title, detail) {
+    const now = new Date();
+    const time = now.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+    this.entries.unshift({ type, title, detail, time });
+    this.updateUI();
+  },
+  updateUI() {
+    const container = document.getElementById('logEntries');
+    if (!container) return;
+    if (this.entries.length === 0) {
+      container.innerHTML = '<p style="color:var(--gray);text-align:center">Nog geen activiteiten</p>';
+      return;
+    }
+    container.innerHTML = this.entries.map(e => `
+      <div class="log-entry">
+        <span class="log-time">${e.time}</span>
+        <div class="log-icon log-icon--${e.type}"><i class="fas fa-${
+          e.type === 'action' ? 'bolt' : e.type === 'success' ? 'check' : e.type === 'alert' ? 'exclamation' : 'info'
+        }"></i></div>
+        <div class="log-content">
+          <strong>${e.title}</strong>
+          <p>${e.detail || ''}</p>
+        </div>
+      </div>
+    `).join('');
+  }
+};
+
+// ============================================================================
+// MAIN APPLICATION OBJECT
+// ============================================================================
+const VIP = {
+  selectedType: null,
+  uploadedDocs: {},    // { docName: { file, text, required } }
+  redFlags: [],
+  currentPage: 'select',
+
+  start() {
+    document.getElementById('launcherScreen').classList.add('hidden');
+    document.getElementById('appContainer').classList.remove('hidden');
+    this.renderTypeGrid();
+    ActivityLog.add('action', 'Applicatie gestart', 'Vergunning Intake Pro v1.0.0');
+  },
+
+  navigate(page) {
+    this.currentPage = page;
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('page--active'));
+    document.getElementById('page-' + page)?.classList.add('page--active');
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('nav-item--active'));
+    document.querySelector(`.nav-item[data-page="${page}"]`)?.classList.add('nav-item--active');
+
+    if (page === 'status') this.renderStatus();
+    if (page === 'scan') this.renderScan();
+    if (page === 'advice') this.renderAdvice();
+  },
+
+  // ── Type Selection ──
+  renderTypeGrid() {
+    const grid = document.getElementById('typeGrid');
+    grid.innerHTML = VERGUNNING_TYPES.map(vt => `
+      <div class="type-card${this.selectedType?.id === vt.id ? ' type-card--selected' : ''}"
+           onclick="VIP.selectType('${vt.id}')">
+        <h4>${vt.name}</h4>
+        <p>${vt.basis} | ${vt.termijn}</p>
+        <div class="doc-count">
+          ${vt.required.length} verplicht + ${vt.optional.length} optioneel
+          ${vt.bibobRelevant ? ' | <span style="color:var(--danger)">BIBOB</span>' : ''}
+        </div>
+      </div>
+    `).join('');
+  },
+
+  filterTypes(query) {
+    const q = query.toLowerCase();
+    document.querySelectorAll('.type-card').forEach((card, i) => {
+      const vt = VERGUNNING_TYPES[i];
+      const match = vt.name.toLowerCase().includes(q) ||
+                    vt.category.toLowerCase().includes(q) ||
+                    vt.basis.toLowerCase().includes(q);
+      card.style.display = match ? '' : 'none';
+    });
+  },
+
+  selectType(id) {
+    this.selectedType = VERGUNNING_TYPES.find(vt => vt.id === id);
+    if (!this.selectedType) return;
+    this.uploadedDocs = {};
+    this.redFlags = [];
+    this.renderTypeGrid();
+    this.renderUploadArea();
+    this.navigate('upload');
+    ActivityLog.add('action', 'Vergunningtype geselecteerd', this.selectedType.name);
+    this.updateFlagBadge();
+  },
+
+  // ── Upload Area ──
+  renderUploadArea() {
+    if (!this.selectedType) return;
+    document.getElementById('noTypeSelected').style.display = 'none';
+    document.getElementById('uploadArea').style.display = '';
+    document.getElementById('uploadSubtitle').textContent = this.selectedType.name;
+
+    const makeGrid = (docs, isRequired) => {
+      return docs.map((doc, i) => {
+        const key = doc;
+        const uploaded = this.uploadedDocs[key];
+        const tileClass = uploaded ? 'upload-tile--uploaded' : (isRequired ? 'upload-tile--required' : 'upload-tile--optional');
+        const badgeClass = uploaded ? 'tile-badge--done' : (isRequired ? 'tile-badge--required' : 'tile-badge--optional');
+        const badgeText = uploaded ? '✓' : (isRequired ? 'Verplicht' : 'Optioneel');
+        const inputId = 'file-' + (isRequired ? 'req' : 'opt') + '-' + i;
+
+        return `
+          <div class="upload-tile ${tileClass}" onclick="document.getElementById('${inputId}').click()">
+            <span class="tile-badge ${badgeClass}">${badgeText}</span>
+            <i class="fas fa-${uploaded ? 'file-circle-check' : 'file-arrow-up'} tile-icon"></i>
+            <h4>${doc.length > 50 ? doc.substring(0, 47) + '...' : doc}</h4>
+            ${uploaded ? `<div class="tile-filename">${uploaded.file.name}</div>` : '<p>Klik om te uploaden</p>'}
+            <input type="file" id="${inputId}" accept=".pdf" onchange="VIP.handleUpload(this, '${key.replace(/'/g, "\\'")}', ${isRequired})">
+          </div>
+        `;
+      }).join('');
+    };
+
+    document.getElementById('requiredGrid').innerHTML = makeGrid(this.selectedType.required, true);
+    document.getElementById('optionalGrid').innerHTML = makeGrid(this.selectedType.optional, false);
+    this.updateCompleteness();
+  },
+
+  async handleUpload(input, docName, isRequired) {
+    if (!input.files || !input.files[0]) return;
+    const file = input.files[0];
+
+    ActivityLog.add('action', 'Document upload', `${file.name} → ${docName}`);
+
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      let text = '';
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        text += content.items.map(x => x.str).join(' ') + '\n';
+      }
+
+      this.uploadedDocs[docName] = { file, text, required: isRequired, pages: pdf.numPages };
+      ActivityLog.add('success', 'PDF verwerkt', `${file.name}: ${pdf.numPages} pagina's`);
+
+      // Run BIBOB scan on this document
+      BIBOBScanner.scanDocument(docName, text, file.name);
+
+      this.renderUploadArea();
+      this.updateFlagBadge();
+    } catch (err) {
+      ActivityLog.add('alert', 'PDF fout', `Kon ${file.name} niet verwerken: ${err.message}`);
+    }
+    input.value = '';
+  },
+
+  updateCompleteness() {
+    if (!this.selectedType) return;
+    const required = this.selectedType.required;
+    const uploaded = required.filter(doc => this.uploadedDocs[doc]).length;
+    const pct = required.length > 0 ? Math.round((uploaded / required.length) * 100) : 0;
+
+    document.getElementById('completenessPercent').textContent = pct + '%';
+    const bar = document.getElementById('completenessBar');
+    bar.style.width = pct + '%';
+    bar.style.background = pct === 100 ? 'var(--success)' : pct >= 50 ? 'var(--warning)' : 'var(--danger)';
+  },
+
+  updateFlagBadge() {
+    const badge = document.getElementById('flagBadge');
+    if (this.redFlags.length > 0) {
+      badge.style.display = '';
+      badge.textContent = this.redFlags.length;
+    } else {
+      badge.style.display = 'none';
+    }
+  },
+
+  // ── Status Page ──
+  renderStatus() {
+    if (!this.selectedType) return;
+    const req = this.selectedType.required;
+    const opt = this.selectedType.optional;
+    const reqUploaded = req.filter(d => this.uploadedDocs[d]).length;
+    const optUploaded = opt.filter(d => this.uploadedDocs[d]).length;
+    const totalUploaded = reqUploaded + optUploaded;
+    const totalDocs = req.length + opt.length;
+
+    document.getElementById('statusStats').innerHTML = `
+      <div class="stat-card"><h4>Vergunningtype</h4><div class="value" style="font-size:0.9rem">${this.selectedType.name.split('(')[0].trim()}</div></div>
+      <div class="stat-card"><h4>Verplicht</h4><div class="value" style="color:${reqUploaded === req.length ? 'var(--success)' : 'var(--danger)'}">${reqUploaded}/${req.length}</div></div>
+      <div class="stat-card"><h4>Optioneel</h4><div class="value">${optUploaded}/${opt.length}</div></div>
+      <div class="stat-card"><h4>Totaal</h4><div class="value">${totalUploaded}/${totalDocs}</div></div>
+      <div class="stat-card"><h4>BIBOB Flags</h4><div class="value" style="color:${this.redFlags.length > 0 ? 'var(--danger)' : 'var(--success)'}">${this.redFlags.length}</div></div>
+    `;
+
+    const allDocs = [
+      ...req.map(d => ({ name: d, required: true, uploaded: !!this.uploadedDocs[d] })),
+      ...opt.map(d => ({ name: d, required: false, uploaded: !!this.uploadedDocs[d] }))
+    ];
+
+    document.getElementById('statusList').innerHTML = allDocs.map(d => `
+      <li>
+        <i class="fas fa-${d.uploaded ? 'check-circle' : 'times-circle'}" style="color:${d.uploaded ? 'var(--success)' : (d.required ? 'var(--danger)' : 'var(--gray)')}"></i>
+        <span>${d.name}</span>
+        <span style="margin-left:auto;font-size:0.75rem;padding:2px 8px;border-radius:8px;background:${d.required ? 'rgba(192,57,43,0.1)' : 'rgba(108,117,125,0.1)'};color:${d.required ? 'var(--danger)' : 'var(--gray)'}">${d.required ? 'Verplicht' : 'Optioneel'}</span>
+      </li>
+    `).join('');
+  },
+
+  // ── Scan Page ──
+  renderScan() {
+    const container = document.getElementById('scanResults');
+    const noResults = document.getElementById('noScanResults');
+
+    if (this.redFlags.length === 0) {
+      container.innerHTML = '';
+      noResults.style.display = '';
+      document.getElementById('scanStats').innerHTML = '';
+      return;
+    }
+    noResults.style.display = 'none';
+
+    const kritiek = this.redFlags.filter(f => f.severity === 'kritiek').length;
+    const hoog = this.redFlags.filter(f => f.severity === 'hoog').length;
+    const midden = this.redFlags.filter(f => f.severity === 'midden').length;
+    const info = this.redFlags.filter(f => f.severity === 'info').length;
+
+    document.getElementById('scanStats').innerHTML = `
+      <div class="stat-card"><h4>Totaal indicatoren</h4><div class="value" style="color:var(--danger)">${this.redFlags.length}</div></div>
+      <div class="stat-card"><h4>Kritiek</h4><div class="value" style="color:#c0392b">${kritiek}</div></div>
+      <div class="stat-card"><h4>Hoog</h4><div class="value" style="color:#e67e22">${hoog}</div></div>
+      <div class="stat-card"><h4>Midden</h4><div class="value" style="color:#f39c12">${midden}</div></div>
+      <div class="stat-card"><h4>Info</h4><div class="value" style="color:#3498db">${info}</div></div>
+    `;
+
+    container.innerHTML = '<div class="card"><h3><i class="fas fa-flag"></i> Gevonden BIBOB-indicatoren</h3>' +
+      this.redFlags.map(f => `
+        <div class="red-flag">
+          <h4>${f.title} <span class="severity severity--${f.severity}">${f.severity.toUpperCase()}</span></h4>
+          <p>${f.desc}</p>
+          ${f.source ? `<p style="margin-top:6px;font-size:0.8rem"><strong>Bron:</strong> ${f.source}</p>` : ''}
+          ${f.action ? `<p style="margin-top:4px;font-size:0.8rem;color:var(--accent)"><strong>Actie:</strong> ${f.action}</p>` : ''}
+        </div>
+      `).join('') + '</div>';
+  },
+
+  // ── Advice Page ──
+  renderAdvice() {
+    const container = document.getElementById('adviceContent');
+    if (!this.selectedType) {
+      container.innerHTML = '<div class="card" style="text-align:center;padding:40px"><p style="color:var(--gray)">Selecteer eerst een vergunningtype</p></div>';
+      return;
+    }
+
+    const reqTotal = this.selectedType.required.length;
+    const reqUploaded = this.selectedType.required.filter(d => this.uploadedDocs[d]).length;
+    const isComplete = reqUploaded === reqTotal;
+    const kritiek = this.redFlags.filter(f => f.severity === 'kritiek').length;
+    const hoog = this.redFlags.filter(f => f.severity === 'hoog').length;
+    const flagScore = (kritiek * 3) + (hoog * 2) + (this.redFlags.length - kritiek - hoog);
+
+    let adviceLevel, adviceIcon, adviceTitle, adviceText, adviceDetail;
+
+    if (!isComplete) {
+      adviceLevel = 'orange';
+      adviceIcon = 'fas fa-exclamation-triangle';
+      adviceTitle = 'Aanvraag incompleet';
+      adviceText = `Er ontbreken nog ${reqTotal - reqUploaded} verplichte document(en). De aanvraag kan niet in behandeling worden genomen.`;
+      adviceDetail = 'Genereer een brief via het "Brief Genereren" tabblad om de aanvrager te informeren over de ontbrekende documenten.';
+    } else if (flagScore === 0) {
+      adviceLevel = 'green';
+      adviceIcon = 'fas fa-check-circle';
+      adviceTitle = 'Aanvraag in behandeling nemen';
+      adviceText = 'Alle verplichte documenten zijn aanwezig en er zijn geen BIBOB-indicatoren gedetecteerd.';
+      adviceDetail = 'U kunt deze aanvraag zelf in behandeling nemen. Er is op basis van de documenten geen aanleiding voor een BIBOB-onderzoek.';
+    } else if (flagScore <= 4) {
+      adviceLevel = 'orange';
+      adviceIcon = 'fas fa-exclamation-triangle';
+      adviceTitle = 'Overweeg aanvullend BIBOB-onderzoek';
+      adviceText = `Er zijn ${this.redFlags.length} BIBOB-indicator(en) gedetecteerd (waarvan ${kritiek} kritiek). Beoordeel of een BIBOB-onderzoek noodzakelijk is.`;
+      adviceDetail = 'De gevonden indicatoren geven aanleiding tot extra alertheid. Overweeg een eigen onderzoek of neem contact op met het RIEC voor advies. Gebruik eventueel BIBOB Analyst Pro voor een volledig onderzoek.';
+    } else {
+      adviceLevel = 'red';
+      adviceIcon = 'fas fa-times-circle';
+      adviceTitle = 'BIBOB-onderzoek vereist';
+      adviceText = `Er zijn ${this.redFlags.length} BIBOB-indicator(en) gedetecteerd (waarvan ${kritiek} kritiek, ${hoog} hoog). Een BIBOB-onderzoek wordt sterk aanbevolen.`;
+      adviceDetail = 'De ernst en hoeveelheid indicatoren rechtvaardigen een volledig BIBOB-onderzoek. Gebruik BIBOB Analyst Pro voor een gestructureerde analyse en overweeg een adviesaanvraag bij het Landelijk Bureau BIBOB (LBB).';
+    }
+
+    container.innerHTML = `
+      <div class="advice-panel advice-panel--${adviceLevel}">
+        <i class="${adviceIcon}" style="color:var(--${adviceLevel === 'green' ? 'success' : adviceLevel === 'orange' ? 'warning' : 'danger'})"></i>
+        <h3>${adviceTitle}</h3>
+        <p style="font-size:1.1rem;margin-bottom:10px">${adviceText}</p>
+        <p>${adviceDetail}</p>
+      </div>
+      <div class="card">
+        <h3><i class="fas fa-chart-bar"></i> Samenvatting</h3>
+        <table style="width:100%;border-collapse:collapse">
+          <tr style="border-bottom:1px solid #eee"><td style="padding:10px;color:var(--gray)">Vergunningtype</td><td style="padding:10px;font-weight:600">${this.selectedType.name}</td></tr>
+          <tr style="border-bottom:1px solid #eee"><td style="padding:10px;color:var(--gray)">Wettelijke basis</td><td style="padding:10px">${this.selectedType.basis}</td></tr>
+          <tr style="border-bottom:1px solid #eee"><td style="padding:10px;color:var(--gray)">Beslistermijn</td><td style="padding:10px">${this.selectedType.termijn}</td></tr>
+          <tr style="border-bottom:1px solid #eee"><td style="padding:10px;color:var(--gray)">BIBOB-plichtig type</td><td style="padding:10px">${this.selectedType.bibobRelevant ? '<span style="color:var(--danger);font-weight:600">Ja</span>' : 'Nee'}</td></tr>
+          <tr style="border-bottom:1px solid #eee"><td style="padding:10px;color:var(--gray)">Verplichte documenten</td><td style="padding:10px">${reqUploaded}/${reqTotal} ${isComplete ? '✓' : '✗'}</td></tr>
+          <tr style="border-bottom:1px solid #eee"><td style="padding:10px;color:var(--gray)">BIBOB-indicatoren</td><td style="padding:10px;color:${this.redFlags.length > 0 ? 'var(--danger)' : 'var(--success)'}">${this.redFlags.length}</td></tr>
+          <tr><td style="padding:10px;color:var(--gray)">Advies</td><td style="padding:10px;font-weight:700;color:var(--${adviceLevel === 'green' ? 'success' : adviceLevel === 'orange' ? 'warning' : 'danger'})">${adviceTitle}</td></tr>
+        </table>
+      </div>
+    `;
+  }
+};
+
+// ============================================================================
+// BIBOB SCANNER — Indicatoren detectie in geüploade documenten
+// ============================================================================
+const BIBOBScanner = {
+  patterns: [
+    // Financiële indicatoren
+    { title: 'Contante financiering', keywords: ['contant', 'cash', 'kasgeld', 'chartaal'], severity: 'kritiek', desc: 'Document bevat verwijzing naar contante financiering. Klassieke witwas-indicator.', action: 'Vraag bankafschriften en onderbouwing herkomst contant geld.' },
+    { title: 'Lening van derden', keywords: ['lening', 'geleend', 'financiering derde'], severity: 'hoog', desc: 'Document bevat verwijzing naar lening van derden. Controleer identiteit en herkomst.', action: 'Vraag leningsovereenkomst, identificatie geldverstrekker.' },
+    { title: 'Buitenlandse financiering', keywords: ['buitenland financ', 'buitenlandse lening', 'offshore', 'dubai', 'cyprus', 'malta', 'curacao'], severity: 'hoog', desc: 'Document bevat verwijzing naar buitenlandse financiering of risicolanden.', action: 'Extra due diligence, vraag bron en route van gelden.' },
+    { title: 'Crypto-financiering', keywords: ['crypto', 'bitcoin', 'ethereum', 'blockchain'], severity: 'hoog', desc: 'Document bevat verwijzing naar cryptocurrency-financiering.', action: 'Vraag exchange-afschriften en wallet-historie.' },
+    { title: 'Onverklaarbaar vermogen', keywords: ['spaargeld', 'erfenis', 'schenking', 'gift'], severity: 'midden', desc: 'Document bevat verwijzing naar vermogensbron die nadere onderbouwing vereist.', action: 'Vraag bewijsstukken van spaargeld, erfenis of schenking.' },
+
+    // Structuur indicatoren
+    { title: 'Stroman/katvanger signaal', keywords: ['stroman', 'katvanger', 'tussenpersoon', 'namens'], severity: 'kritiek', desc: 'Document bevat mogelijke verwijzing naar stromanconstructie.', action: 'Stel inhoudelijke vragen rechtstreeks aan aanvrager.' },
+    { title: 'Complexe bedrijfsstructuur', keywords: ['holding', 'dochtermaatschappij', 'moedermaatschappij', 'groepsstructuur'], severity: 'hoog', desc: 'Document bevat verwijzing naar complexe bedrijfsstructuur.', action: 'Vraag organogram en zakelijke noodzaak elke entiteit.' },
+    { title: 'Stichting in structuur', keywords: ['stichting', 'stak', 'certificering aandelen'], severity: 'hoog', desc: 'Document bevat verwijzing naar stichting in eigendomsstructuur. Geschikt voor UBO-verhulling.', action: 'Vraag certificaathouders en administratievoorwaarden.' },
+    { title: 'Buitenlandse entiteit', keywords: ['bvi', 'british virgin', 'panama', 'seychellen', 'cayman'], severity: 'kritiek', desc: 'Document bevat verwijzing naar offshore entiteit in risicoland.', action: 'Identificeer UBO, vraag zakelijke noodzaak buitenlandse entiteit.' },
+
+    // Antecedenten
+    { title: 'Faillissement', keywords: ['faillissement', 'failliet', 'surseance', 'schuldsanering'], severity: 'hoog', desc: 'Document bevat verwijzing naar faillissement of surseance.', action: 'Controleer faillissementsregister en rol aanvrager.' },
+    { title: 'Strafrechtelijke veroordeling', keywords: ['veroordeling', 'vonnis', 'strafblad', 'taakstraf', 'gevangenisstraf'], severity: 'kritiek', desc: 'Document bevat verwijzing naar strafrechtelijke antecedenten.', action: 'Verifieer via VOG en overweeg adviesaanvraag LBB.' },
+    { title: 'Bestuurlijk optreden', keywords: ['bestuursdwang', 'last onder dwangsom', 'intrekking vergunning', 'sluiting'], severity: 'hoog', desc: 'Document bevat verwijzing naar eerder bestuurlijk optreden.', action: 'Controleer bij andere gemeenten via RIEC/Noctua.' },
+    { title: 'Belastingschuld', keywords: ['belastingschuld', 'naheffing', 'boete belasting', 'fiscale schuld'], severity: 'hoog', desc: 'Document bevat verwijzing naar belastingschuld.', action: 'Vraag actuele fiscale positie en betalingsregeling.' },
+
+    // Vastgoed indicatoren
+    { title: 'ABC-transactie', keywords: ['doorverkoop', 'kort eigendom', 'snel doorverkocht'], severity: 'kritiek', desc: 'Document bevat aanwijzing voor snelle doorverkoop (ABC-transactie). Klassieke witwas-indicator.', action: 'Controleer prijsontwikkeling en waardetoevoeging.' },
+    { title: 'Onderbezetting/overbezetting pand', keywords: ['onderbezetting', 'overbezetting', 'leegstand'], severity: 'midden', desc: 'Document bevat aanwijzing voor afwijkend gebruik van het pand.', action: 'Controleer feitelijk gebruik en bestemming.' },
+
+    // BIBOB-specifiek
+    { title: 'BIBOB-formulier niet volledig ingevuld', keywords: ['niet ingevuld', 'ontbreekt', 'onvolledig', 'aanvullen'], severity: 'midden', desc: 'Document bevat aanwijzing dat het BIBOB-formulier niet volledig is ingevuld.', action: 'Stuur verzoek tot aanvulling naar aanvrager.' },
+    { title: 'Verwevenheid personen/bedrijven', keywords: ['verwevenheid', 'relatie', 'betrokkenheid bij meerdere', 'samenhang'], severity: 'hoog', desc: 'Document bevat aanwijzing voor verwevenheid tussen personen en/of bedrijven.', action: 'Breng zakelijk netwerk in kaart (BIBOB Analyst Pro).' },
+    { title: 'PEP (Politiek Prominent Persoon)', keywords: ['pep', 'politically exposed', 'politiek prominent'], severity: 'hoog', desc: 'Document bevat mogelijke verwijzing naar een PEP.', action: 'Voer verscherpt cliëntenonderzoek uit.' },
+    { title: 'Witwas-indicator', keywords: ['witwas', 'zwart geld', 'crimineel vermogen', 'verdacht transactie'], severity: 'kritiek', desc: 'Document bevat directe verwijzing naar witwassen.', action: 'Melding bij FIU-Nederland overwegen, adviesaanvraag LBB.' },
+    { title: 'Mensenhandel/uitbuiting', keywords: ['mensenhandel', 'uitbuiting', 'illegale arbeid', 'onderbetaling'], severity: 'kritiek', desc: 'Document bevat verwijzing naar mogelijke mensenhandel of arbeidsuitbuiting.', action: 'Meld bij Inspectie SZW en overweeg adviesaanvraag LBB.' }
+  ],
+
+  scanDocument(docName, text, filename) {
+    const t = text.toLowerCase();
+    let foundFlags = [];
+
+    this.patterns.forEach(pattern => {
+      const matched = pattern.keywords.some(kw => t.includes(kw));
+      if (matched) {
+        foundFlags.push({
+          title: pattern.title,
+          desc: pattern.desc,
+          severity: pattern.severity,
+          action: pattern.action,
+          source: `Document: ${filename} (${docName})`,
+          uniqueId: Date.now() + '-' + Math.random().toString(36).substr(2, 6)
+        });
+      }
+    });
+
+    if (foundFlags.length > 0) {
+      VIP.redFlags.push(...foundFlags);
+      ActivityLog.add('alert', `BIBOB scan: ${foundFlags.length} indicator(en)`, `In ${filename}`);
+    } else {
+      ActivityLog.add('success', 'BIBOB scan schoon', `Geen indicatoren in ${filename}`);
+    }
+  }
+};
+
+// ============================================================================
+// LETTER GENERATOR — Brief voor ontbrekende documenten
+// ============================================================================
+const LetterGen = {
+  preview() {
+    if (!VIP.selectedType) { alert('Selecteer eerst een vergunningtype'); return; }
+    const missing = VIP.selectedType.required.filter(d => !VIP.uploadedDocs[d]);
+    if (missing.length === 0) { alert('Alle verplichte documenten zijn aanwezig. Er is geen brief nodig.'); return; }
+
+    const gemeente = document.getElementById('letterGemeente').value || '[Gemeente]';
+    const afdeling = document.getElementById('letterAfdeling').value || '[Afdeling]';
+    const behandelaar = document.getElementById('letterBehandelaar').value || '[Naam behandelaar]';
+    const zaaknummer = document.getElementById('letterZaaknummer').value || '[Zaaknummer]';
+    const naam = document.getElementById('letterNaam').value || '[Naam aanvrager]';
+    const adres = document.getElementById('letterAdres').value || '[Adres]';
+    const postcode = document.getElementById('letterPostcode').value || '[Postcode + Plaats]';
+    const datum = document.getElementById('letterDatum').value || new Date().toLocaleDateString('nl-NL');
+
+    const termijn = VIP.selectedType.termijn || '8 weken';
+
+    const html = `
+      <div style="max-width:700px;margin:0 auto;font-family:'Times New Roman',serif;font-size:12pt;line-height:1.6;color:#000">
+        <p style="font-weight:bold;font-size:14pt">Gemeente ${gemeente}</p>
+        <p>${afdeling}</p>
+        <br>
+        <p>${naam}<br>${adres}<br>${postcode}</p>
+        <br>
+        <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+          <tr><td style="width:120px;color:#666">Datum:</td><td>${datum}</td></tr>
+          <tr><td style="color:#666">Ons kenmerk:</td><td>${zaaknummer}</td></tr>
+          <tr><td style="color:#666">Behandeld door:</td><td>${behandelaar}</td></tr>
+          <tr><td style="color:#666">Onderwerp:</td><td>Verzoek aanvulling ${VIP.selectedType.name}</td></tr>
+        </table>
+        <p>Geachte heer/mevrouw ${naam},</p>
+        <br>
+        <p>Op ${datum} hebben wij uw aanvraag ontvangen voor een <strong>${VIP.selectedType.name}</strong>.</p>
+        <p>Na beoordeling van de ingediende stukken constateren wij dat uw aanvraag nog niet compleet is. De volgende verplichte documenten ontbreken:</p>
+        <br>
+        <ol style="margin-left:20px">
+          ${missing.map(d => `<li style="margin-bottom:6px">${d}</li>`).join('')}
+        </ol>
+        <br>
+        <p>Wij verzoeken u vriendelijk bovengenoemde documenten binnen <strong>4 weken</strong> na dagtekening van deze brief aan te leveren. U kunt de documenten digitaal indienen via het Omgevingsloket of inleveren bij de balie van de gemeente.</p>
+        <p>Indien wij de gevraagde stukken niet binnen de gestelde termijn ontvangen, kan uw aanvraag niet in behandeling worden genomen en wordt deze buiten behandeling gesteld op grond van artikel 4:5 van de Algemene wet bestuursrecht (Awb).</p>
+        <br>
+        <p>Wettelijke basis: ${VIP.selectedType.basis}<br>Beslistermijn: ${termijn}</p>
+        <br>
+        <p>Voor vragen kunt u contact opnemen met ondergetekende.</p>
+        <br>
+        <p>Met vriendelijke groet,</p>
+        <br>
+        <p>${behandelaar}<br>${afdeling}<br>Gemeente ${gemeente}</p>
+        <br>
+        <hr style="border:none;border-top:1px solid #ccc;margin:20px 0">
+        <p style="font-size:9pt;color:#666">Dit document is gegenereerd met Vergunning Intake Pro — Knowledge by Data B.V.<br>
+        Gegenereerd op: ${new Date().toLocaleString('nl-NL')}</p>
+      </div>
+    `;
+
+    document.getElementById('letterContent').innerHTML = html;
+    document.getElementById('letterPreview').style.display = '';
+    this._lastHTML = html;
+    ActivityLog.add('action', 'Brief voorbeeld gegenereerd', `${missing.length} ontbrekende documenten`);
+  },
+
+  downloadHTML() {
+    if (!this._lastHTML) { this.preview(); }
+    if (!this._lastHTML) return;
+    const fullHTML = `<!DOCTYPE html><html lang="nl"><head><meta charset="UTF-8"><title>Verzoek aanvulling - ${VIP.selectedType?.name || 'Vergunning'}</title></head><body style="margin:40px">${this._lastHTML}</body></html>`;
+    const blob = new Blob([fullHTML], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `verzoek-aanvulling-${VIP.selectedType?.id || 'vergunning'}-${Date.now()}.html`;
+    a.click();
+    URL.revokeObjectURL(url);
+    ActivityLog.add('success', 'Brief gedownload', a.download);
+  }
+};
+
+// ── PDF.js worker configuratie ──
+if (typeof pdfjsLib !== 'undefined') {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+</script>
+</body>
+</html>

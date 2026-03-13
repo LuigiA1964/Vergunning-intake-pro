@@ -1,0 +1,48 @@
+[package]
+name = "vergunning-intake-pro"
+version = "1.0.0"
+description = "Vergunning Intake Pro - Digitale intake-assistent voor gemeentelijke vergunningaanvragen"
+authors = ["L.P. Antenbrink, Knowledge by Data B.V."]
+license = "Proprietary"
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "1", features = [] }
+
+[dependencies]
+tauri = { version = "1", features = [
+    "dialog-save",
+    "dialog-open",
+    "dialog-message",
+    "dialog-ask",
+    "dialog-confirm",
+    "fs-read-file",
+    "fs-write-file",
+    "fs-read-dir",
+    "fs-create-dir",
+    "fs-exists",
+    "path-all",
+    "os-all",
+    "shell-open",
+    "window-close",
+    "window-set-title",
+    "window-set-fullscreen",
+    "window-set-size",
+    "window-set-min-size",
+    "window-set-max-size",
+    "window-maximize",
+    "window-unmaximize",
+    "window-minimize",
+    "window-unminimize",
+    "window-show",
+    "window-hide",
+    "window-set-focus",
+    "window-center",
+    "clipboard-write-text"
+] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]

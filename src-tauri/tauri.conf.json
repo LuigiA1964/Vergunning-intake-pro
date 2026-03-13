@@ -1,0 +1,127 @@
+{
+  "build": {
+    "distDir": "../dist",
+    "devPath": "../dist",
+    "withGlobalTauri": true,
+    "beforeDevCommand": "",
+    "beforeBuildCommand": ""
+  },
+  "package": {
+    "productName": "Vergunning Intake Pro",
+    "version": "1.0.0"
+  },
+  "tauri": {
+    "bundle": {
+      "active": true,
+      "category": "Business",
+      "copyright": "© 2026 L.P. Antenbrink, Knowledge by Data B.V.",
+      "identifier": "nl.knowledgebydata.vergunning-intake-pro",
+      "icon": [
+        "icons/32x32.png",
+        "icons/128x128.png",
+        "icons/128x128@2x.png",
+        "icons/icon.icns",
+        "icons/icon.ico"
+      ],
+      "resources": [],
+      "targets": "all",
+      "windows": {
+        "certificateThumbprint": null,
+        "digestAlgorithm": "sha256",
+        "timestampUrl": "",
+        "wix": {
+          "language": "nl-NL"
+        },
+        "nsis": {
+          "languages": ["Dutch"],
+          "displayLanguageSelector": false,
+          "installerIcon": "icons/icon.ico",
+          "headerImage": null,
+          "sidebarImage": null
+        }
+      }
+    },
+    "security": {
+      "csp": null
+    },
+    "allowlist": {
+      "all": false,
+      "dialog": {
+        "all": false,
+        "ask": true,
+        "confirm": true,
+        "message": true,
+        "open": true,
+        "save": true
+      },
+      "fs": {
+        "all": false,
+        "readFile": true,
+        "writeFile": true,
+        "readDir": true,
+        "createDir": true,
+        "removeFile": false,
+        "removeDir": false,
+        "exists": true,
+        "scope": [
+          "$DOCUMENT/**",
+          "$DOWNLOAD/**",
+          "$DESKTOP/**",
+          "$APPDATA/**",
+          "$APPCACHE/**"
+        ]
+      },
+      "path": {
+        "all": true
+      },
+      "os": {
+        "all": true
+      },
+      "shell": {
+        "all": false,
+        "open": true
+      },
+      "window": {
+        "all": false,
+        "close": true,
+        "setTitle": true,
+        "setFullscreen": true,
+        "setSize": true,
+        "setMinSize": true,
+        "setMaxSize": true,
+        "center": true,
+        "maximize": true,
+        "unmaximize": true,
+        "minimize": true,
+        "unminimize": true,
+        "show": true,
+        "hide": true,
+        "setFocus": true,
+        "setAlwaysOnTop": false
+      },
+      "clipboard": {
+        "all": false,
+        "writeText": true,
+        "readText": false
+      }
+    },
+    "windows": [
+      {
+        "title": "Vergunning Intake Pro — Knowledge by Data",
+        "width": 1400,
+        "height": 900,
+        "minWidth": 1024,
+        "minHeight": 768,
+        "resizable": true,
+        "fullscreen": false,
+        "center": true,
+        "decorations": true,
+        "transparent": false,
+        "fileDropEnabled": true
+      }
+    ],
+    "updater": {
+      "active": false
+    }
+  }
+}

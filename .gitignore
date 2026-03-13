@@ -1,0 +1,20 @@
+# Dependencies
+node_modules/
+
+# Rust build artifacts
+src-tauri/target/
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.local
