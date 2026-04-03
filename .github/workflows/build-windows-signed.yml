@@ -30,7 +30,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Extract app metadata
         id: meta
@@ -45,7 +45,7 @@ jobs:
           echo "App: $APP_NAME v$APP_VERSION (slug: $ARTIFACT_SLUG)"
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '22'
 
@@ -55,7 +55,7 @@ jobs:
           toolchain: stable
 
       - name: Cache Rust dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/bin/
@@ -90,6 +90,9 @@ jobs:
         run: npm run tauri:build -- ${{ steps.bundle.outputs.args }}
 
       # ── Code Signing met SSL.com eSigner ──────────────────────────────────
+      # NB: sslcom/esigner-codesign@v1.3.2 draait nog op Node 20.
+      # SSL.com heeft nog geen Node 24-compatibele versie uitgebracht.
+      # De action blijft functioneel tot 16 september 2026.
 
       - name: Sign NSIS installer (.exe)
         if: steps.bundle.outputs.type == 'nsis' || steps.bundle.outputs.type == 'both'
@@ -124,7 +127,6 @@ jobs:
         shell: bash
         run: |
           mkdir -p signed
-          # Als signed dir bestanden bevat, gebruik die. Anders fallback naar unsigned.
           NSIS_SIGNED=$(find signed -name "*.exe" 2>/dev/null | head -1)
           MSI_SIGNED=$(find signed -name "*.msi" 2>/dev/null | head -1)
 
@@ -155,7 +157,7 @@ jobs:
 
       - name: Upload NSIS installer
         if: steps.bundle.outputs.type == 'nsis' || steps.bundle.outputs.type == 'both'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ${{ steps.meta.outputs.slug }}-windows-nsis-signed
           path: signed/*.exe
@@ -164,7 +166,7 @@ jobs:
 
       - name: Upload MSI installer
         if: steps.bundle.outputs.type == 'msi' || steps.bundle.outputs.type == 'both'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ${{ steps.meta.outputs.slug }}-windows-msi-signed
           path: signed/*.msi
