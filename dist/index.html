@@ -256,6 +256,7 @@ body {
 </style>
 </head>
 <body>
+<script src="auth-guard.js"></script>
 
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
 <!-- LAUNCHER SCREEN                                                       -->
@@ -462,6 +463,11 @@ body {
 <!-- JavaScript wordt in delen toegevoegd -->
 <script>
 'use strict';
+
+// ============================================================================
+// AUTH GUARD WRAPPER
+// ============================================================================
+AuthGuard.protect(function() {
 
 // ============================================================================
 // VERGUNNINGEN DATABASE — Alle 30 typen met verplichte/optionele documenten

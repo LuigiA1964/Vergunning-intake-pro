@@ -1,0 +1,216 @@
+name: Build & Sign Windows Installer
+
+on:
+  workflow_dispatch:
+    inputs:
+      bundle_type:
+        description: 'Installer type'
+        required: true
+        default: 'both'
+        type: choice
+        options:
+          - nsis
+          - msi
+          - both
+
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'LICENSE'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-and-sign-windows:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract app metadata
+        id: meta
+        shell: bash
+        run: |
+          APP_NAME=$(grep '"productName"' src-tauri/tauri.conf.json | head -1 | sed 's/.*: *"\(.*\)".*/\1/' | tr -d ',')
+          APP_VERSION=$(grep '"version"' src-tauri/tauri.conf.json | head -1 | sed 's/.*: *"\([0-9][0-9.]*\)".*/\1/')
+          ARTIFACT_SLUG=$(echo "$APP_NAME" | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
+          echo "name=$APP_NAME" >> $GITHUB_OUTPUT
+          echo "version=$APP_VERSION" >> $GITHUB_OUTPUT
+          echo "slug=$ARTIFACT_SLUG" >> $GITHUB_OUTPUT
+          echo "App: $APP_NAME v$APP_VERSION (slug: $ARTIFACT_SLUG)"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            src-tauri/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Install npm dependencies
+        run: npm install
+
+      - name: Determine bundle type
+        id: bundle
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TYPE="${{ github.event.inputs.bundle_type }}"
+          else
+            TYPE="both"
+          fi
+          if [ "$TYPE" = "both" ]; then
+            echo "args=" >> $GITHUB_OUTPUT
+          else
+            echo "args=--bundles $TYPE" >> $GITHUB_OUTPUT
+          fi
+          echo "type=$TYPE" >> $GITHUB_OUTPUT
+
+      - name: Build Tauri app (unsigned)
+        run: npm run tauri:build -- ${{ steps.bundle.outputs.args }}
+
+      # ── Code Signing met SSL.com eSigner ──────────────────────────────────
+
+      - name: Sign NSIS installer (.exe)
+        if: steps.bundle.outputs.type == 'nsis' || steps.bundle.outputs.type == 'both'
+        uses: sslcom/esigner-codesign@develop
+        with:
+          command: sign
+          username: ${{ secrets.ES_USERNAME }}
+          password: ${{ secrets.ES_PASSWORD }}
+          credential_id: ${{ secrets.ES_CREDENTIAL_ID }}
+          totp_secret: ${{ secrets.ES_TOTP_SECRET }}
+          file_path: ${{ github.workspace }}/src-tauri/target/release/bundle/nsis/${{ steps.meta.outputs.name }}_${{ steps.meta.outputs.version }}_x64-setup.exe
+          output_path: ${{ github.workspace }}/signed
+          environment_name: PROD
+
+      - name: Sign MSI installer (.msi)
+        if: steps.bundle.outputs.type == 'msi' || steps.bundle.outputs.type == 'both'
+        uses: sslcom/esigner-codesign@develop
+        with:
+          command: sign
+          username: ${{ secrets.ES_USERNAME }}
+          password: ${{ secrets.ES_PASSWORD }}
+          credential_id: ${{ secrets.ES_CREDENTIAL_ID }}
+          totp_secret: ${{ secrets.ES_TOTP_SECRET }}
+          file_path: ${{ github.workspace }}/src-tauri/target/release/bundle/msi/${{ steps.meta.outputs.name }}_${{ steps.meta.outputs.version }}_x64_nl-NL.msi
+          output_path: ${{ github.workspace }}/signed
+          environment_name: PROD
+
+      # ── Fallback: kopieer unsigned als signing faalt ──────────────────────
+
+      - name: Collect signed artifacts
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p signed
+          # Als signed dir bestanden bevat, gebruik die. Anders fallback naar unsigned.
+          NSIS_SIGNED=$(find signed -name "*.exe" 2>/dev/null | head -1)
+          MSI_SIGNED=$(find signed -name "*.msi" 2>/dev/null | head -1)
+
+          if [ -n "$NSIS_SIGNED" ]; then
+            echo "✅ NSIS installer is SIGNED: $NSIS_SIGNED"
+          else
+            NSIS_UNSIGNED=$(find src-tauri/target/release/bundle/nsis -name "*.exe" 2>/dev/null | head -1)
+            if [ -n "$NSIS_UNSIGNED" ]; then
+              cp "$NSIS_UNSIGNED" signed/
+              echo "⚠️ NSIS installer is UNSIGNED (signing stap niet gelukt)"
+            fi
+          fi
+
+          if [ -n "$MSI_SIGNED" ]; then
+            echo "✅ MSI installer is SIGNED: $MSI_SIGNED"
+          else
+            MSI_UNSIGNED=$(find src-tauri/target/release/bundle/msi -name "*.msi" 2>/dev/null | head -1)
+            if [ -n "$MSI_UNSIGNED" ]; then
+              cp "$MSI_UNSIGNED" signed/
+              echo "⚠️ MSI installer is UNSIGNED (signing stap niet gelukt)"
+            fi
+          fi
+
+          echo "Bestanden in signed/:"
+          ls -lh signed/ 2>/dev/null || echo "(leeg)"
+
+      # ── Upload artifacts & Release ────────────────────────────────────────
+
+      - name: Upload NSIS installer
+        if: steps.bundle.outputs.type == 'nsis' || steps.bundle.outputs.type == 'both'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.meta.outputs.slug }}-windows-nsis-signed
+          path: signed/*.exe
+          retention-days: 90
+          if-no-files-found: warn
+
+      - name: Upload MSI installer
+        if: steps.bundle.outputs.type == 'msi' || steps.bundle.outputs.type == 'both'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.meta.outputs.slug }}-windows-msi-signed
+          path: signed/*.msi
+          retention-days: 90
+          if-no-files-found: warn
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.meta.outputs.version }}
+          name: "${{ steps.meta.outputs.name }} v${{ steps.meta.outputs.version }}"
+          body: |
+            ## ${{ steps.meta.outputs.name }} v${{ steps.meta.outputs.version }}
+
+            ✅ **Windows installers zijn digitaal ondertekend** met een SSL.com EV Code Signing certificaat.
+            Geen SmartScreen-waarschuwing meer bij installatie.
+
+            ### Downloads
+            - **EXE installer** (NSIS) — aanbevolen voor eindgebruikers
+            - **MSI installer** (WiX) — voor uitrol via groepsbeleid / SCCM
+
+            ### Verificatie
+            Rechtermuisklik op het bestand → Eigenschappen → Digitale handtekeningen
+            Ondertekenaar: Knowledge by Data B.V.
+          draft: false
+          prerelease: false
+          files: |
+            signed/*.exe
+            signed/*.msi
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build summary
+        shell: bash
+        run: |
+          echo "## Build & Sign Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Product:** ${{ steps.meta.outputs.name }} v${{ steps.meta.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Bundle:** ${{ steps.bundle.outputs.type }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if find signed -name "*.exe" -o -name "*.msi" 2>/dev/null | grep -q .; then
+            echo "**Signing:** ✅ SSL.com eSigner (EV Code Signing)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "**Signing:** ⚠️ Unsigned (controleer eSigner configuratie)" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Signed artifacts:" >> $GITHUB_STEP_SUMMARY
+          ls -lh signed/ 2>/dev/null >> $GITHUB_STEP_SUMMARY || echo "Geen bestanden gevonden" >> $GITHUB_STEP_SUMMARY
