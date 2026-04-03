@@ -89,13 +89,38 @@ jobs:
       - name: Build Tauri app (unsigned)
         run: npm run tauri:build -- ${{ steps.bundle.outputs.args }}
 
+      # ── Diagnostiek: toon exact welke bestanden gebuild zijn ────────────
+      - name: List built installers
+        id: files
+        shell: bash
+        run: |
+          echo "=== NSIS output ==="
+          ls -la src-tauri/target/release/bundle/nsis/ 2>/dev/null || echo "(geen nsis directory)"
+          echo ""
+          echo "=== MSI output ==="
+          ls -la src-tauri/target/release/bundle/msi/ 2>/dev/null || echo "(geen msi directory)"
+          echo ""
+
+          # Zoek de exacte bestandsnamen (case-insensitive, met glob)
+          NSIS_FILE=$(find src-tauri/target/release/bundle/nsis -name "*x64-setup.exe" 2>/dev/null | head -1)
+          MSI_FILE=$(find src-tauri/target/release/bundle/msi -name "*x64*.msi" 2>/dev/null | head -1)
+
+          echo "nsis_file=$NSIS_FILE" >> $GITHUB_OUTPUT
+          echo "msi_file=$MSI_FILE" >> $GITHUB_OUTPUT
+
+          echo "NSIS bestand gevonden: ${NSIS_FILE:-GEEN}"
+          echo "MSI bestand gevonden: ${MSI_FILE:-GEEN}"
+
       # ── Code Signing met SSL.com eSigner ──────────────────────────────────
       # NB: sslcom/esigner-codesign@v1.3.2 draait nog op Node 20.
       # SSL.com heeft nog geen Node 24-compatibele versie uitgebracht.
       # De action blijft functioneel tot 16 september 2026.
+      #
+      # BELANGRIJK: ES_USERNAME moet je SSL.com e-mailadres zijn.
+      # Wachtwoord (ES_PASSWORD) mag GEEN dubbele aanhalingstekens bevatten.
 
       - name: Sign NSIS installer (.exe)
-        if: steps.bundle.outputs.type == 'nsis' || steps.bundle.outputs.type == 'both'
+        if: steps.files.outputs.nsis_file != ''
         uses: sslcom/esigner-codesign@v1.3.2
         with:
           command: sign
@@ -103,12 +128,15 @@ jobs:
           password: ${{ secrets.ES_PASSWORD }}
           credential_id: ${{ secrets.ES_CREDENTIAL_ID }}
           totp_secret: ${{ secrets.ES_TOTP_SECRET }}
-          file_path: ${{ github.workspace }}/src-tauri/target/release/bundle/nsis/${{ steps.meta.outputs.name }}_${{ steps.meta.outputs.version }}_x64-setup.exe
+          file_path: ${{ steps.files.outputs.nsis_file }}
           output_path: ${{ github.workspace }}/signed
+          malware_block: false
           environment_name: PROD
+          jvm_max_memory: 2048M
+          clean_logs: false
 
       - name: Sign MSI installer (.msi)
-        if: steps.bundle.outputs.type == 'msi' || steps.bundle.outputs.type == 'both'
+        if: steps.files.outputs.msi_file != ''
         uses: sslcom/esigner-codesign@v1.3.2
         with:
           command: sign
@@ -116,9 +144,37 @@ jobs:
           password: ${{ secrets.ES_PASSWORD }}
           credential_id: ${{ secrets.ES_CREDENTIAL_ID }}
           totp_secret: ${{ secrets.ES_TOTP_SECRET }}
-          file_path: ${{ github.workspace }}/src-tauri/target/release/bundle/msi/${{ steps.meta.outputs.name }}_${{ steps.meta.outputs.version }}_x64_nl-NL.msi
+          file_path: ${{ steps.files.outputs.msi_file }}
           output_path: ${{ github.workspace }}/signed
+          malware_block: false
           environment_name: PROD
+          jvm_max_memory: 2048M
+          clean_logs: false
+
+      # ── Debug: toon signing logs bij falen ───────────────────────────────
+
+      - name: Show eSigner logs on failure
+        if: failure()
+        shell: bash
+        run: |
+          echo "=== eSigner debug info ==="
+          echo "NSIS file_path was: ${{ steps.files.outputs.nsis_file }}"
+          echo "MSI file_path was: ${{ steps.files.outputs.msi_file }}"
+          echo ""
+          echo "=== Zoek naar CodeSignTool logs ==="
+          find ${{ github.workspace }} -name "*.log" -path "*codesign*" 2>/dev/null | while read f; do
+            echo "--- $f ---"
+            cat "$f" 2>/dev/null
+          done
+          echo ""
+          echo "=== Zoek naar error output ==="
+          find /tmp -name "*.log" 2>/dev/null | head -10 | while read f; do
+            echo "--- $f ---"
+            tail -50 "$f" 2>/dev/null
+          done
+          echo ""
+          echo "=== Java/CodeSignTool processes ==="
+          tasklist 2>/dev/null | grep -i "java\|codesign" || echo "Geen relevante processen"
 
       # ── Fallback: kopieer unsigned als signing faalt ──────────────────────
 
