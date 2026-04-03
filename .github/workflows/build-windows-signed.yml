@@ -47,7 +47,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -93,7 +93,7 @@ jobs:
 
       - name: Sign NSIS installer (.exe)
         if: steps.bundle.outputs.type == 'nsis' || steps.bundle.outputs.type == 'both'
-        uses: sslcom/esigner-codesign@develop
+        uses: sslcom/esigner-codesign@v1.3.2
         with:
           command: sign
           username: ${{ secrets.ES_USERNAME }}
@@ -106,7 +106,7 @@ jobs:
 
       - name: Sign MSI installer (.msi)
         if: steps.bundle.outputs.type == 'msi' || steps.bundle.outputs.type == 'both'
-        uses: sslcom/esigner-codesign@develop
+        uses: sslcom/esigner-codesign@v1.3.2
         with:
           command: sign
           username: ${{ secrets.ES_USERNAME }}
